@@ -115,7 +115,6 @@ def generer_qrcode():
         pos_x = (largeur_qr - taille_logo) // 2
         pos_y = (largeur_qr - taille_logo) // 2
 
-        # LE CORRECTIF EST ICI :
         # On colle juste l'image aux coordonnées (pos_x, pos_y).
         image_en_memoire.paste(logo, (pos_x, pos_y))
 
