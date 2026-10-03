@@ -3,7 +3,8 @@ from tkinter import (
     filedialog,  # Bibliotheque permettant d'ouvrir une boite de dialogue pour enregistrer son fichier ou choisir son image personalisable por le QR Code
     messagebox,  # Pop-up si champ non saisie
 )
-
+import io               # Pour gérer l'image téléchargée en mémoire
+import urllib.parse     # Pour extraire le nom de domaine de l'URL
 import qrcode
 import requests
 from PIL import (  # Permet de gérer les images générer via la librairie qrcode grace à PIL. Pour que Tkinter affiche le qrcode
@@ -81,9 +82,7 @@ def generer_qrcode():
     c_fond = var_couleur_fond.get()
 
     if c_qr == c_fond:
-        messagebox.showerror(
-            "Erreur", "La couleur des carrés et du fond sont identiques."
-        )
+        messagebox.showerror("Erreur", "La couleur des carrés et du fond sont identiques.")
         return
 
     # 1. Création du QR Code
@@ -97,28 +96,54 @@ def generer_qrcode():
     qr.add_data(lien)
     qr.make(fit=True)
 
-    # 2. On crée l'image et on la convertit tout de suite en RGB (Couleurs)
+    # 2. On crée l'image et on la convertit en RGB
     image_en_memoire = qr.make_image(fill_color=c_qr, back_color=c_fond).convert("RGB")
 
-    # 3. Ajout du Logo
+   # 3. Récupération du Logo (Manuel ou Automatique)
+    logo = None
+
     if chemin_logo_choisi:
-        logo = Image.open(chemin_logo_choisi)
+           # Priorité 1 : L'utilisateur a choisi un logo sur son PC
+        logo = Image.open(chemin_logo_choisi).convert("RGBA")
+    else:
+           # Priorité 2 : Automatique (on télécharge le favicon)
+           # On simule la présence de http:// si l'utilisateur l'a oublié (ex: "youtube.com")
+        lien_nettoye = lien
+        if not lien_nettoye.startswith("http"):
+            lien_nettoye = "http://" + lien_nettoye
 
-        # Calcul taille
+        try:
+               # Maintenant, urlparse trouvera toujours le domaine correctement
+            domaine = urllib.parse.urlparse(lien_nettoye).netloc
+
+            if domaine: # Si le domaine n'est pas vide
+                url_favicon = f"https://www.google.com/s2/favicons?domain={domaine}&sz=128"
+
+                   # On ajoute un "User-Agent" pour faire croire à Google qu'on est sur un vrai navigateur Windows/Chrome
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+
+                reponse = requests.get(url_favicon, headers=headers, timeout=5)
+                if reponse.status_code == 200:
+                       # On lit l'image directement depuis la mémoire
+                    logo = Image.open(io.BytesIO(reponse.content)).convert("RGBA")
+        except Exception:
+               # En cas d'erreur (pas de connexion, pas d'image trouvée...), le programme ne plante pas
+            pass
+
+    # 4. Ajout du Logo sur le QR Code (s'il y en a un)
+    if logo:
         largeur_qr = image_en_memoire.size[0]
-        taille_logo = int(largeur_qr * 0.25)
+        taille_logo = int(largeur_qr * 0.25) # 25% de la taille du QR
 
-        # Redimensionnement
         logo = logo.resize((taille_logo, taille_logo))
 
-        # Position
         pos_x = (largeur_qr - taille_logo) // 2
         pos_y = (largeur_qr - taille_logo) // 2
 
-        # On colle juste l'image aux coordonnées (pos_x, pos_y).
-        image_en_memoire.paste(logo, (pos_x, pos_y))
+        # Le 3ème paramètre 'logo' sert de masque pour respecter la transparence (PNG)
+        image_en_memoire.paste(logo, (pos_x, pos_y), logo)
 
-    # 4. Affichage
+    # 5. Affichage
     affichage_img = image_en_memoire.resize((250, 250))
     tk_image = ImageTk.PhotoImage(affichage_img)
 
@@ -126,7 +151,6 @@ def generer_qrcode():
     label_image_preview.image = tk_image
 
     btn_sauvegarder.config(state=tk.NORMAL, bg="#90ee90")
-
 
 def sauvegarder_fichier():
     global image_en_memoire
