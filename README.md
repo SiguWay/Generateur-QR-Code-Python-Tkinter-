@@ -28,7 +28,7 @@ Le programme s'appuie sur plusieurs bibliothèques externes qu'il est nécessair
 python -m pip install "qrcode[pil]" Pillow requests
 ```
 
-###🐧 Pour Linux et 🍏 macOS (Terminal) :
+### 🐧 Pour Linux et 🍏 macOS (Terminal) :
 ```bash
 python3 -m pip install "qrcode[pil]" Pillow requests
 ```
