@@ -113,7 +113,6 @@ def generer_qrcode():
             lien_nettoye = "http://" + lien_nettoye
 
         try:
-               # Maintenant, urlparse trouvera toujours le domaine correctement
             domaine = urllib.parse.urlparse(lien_nettoye).netloc
 
             if domaine: # Si le domaine n'est pas vide
